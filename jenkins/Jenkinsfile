@@ -9,6 +9,9 @@ pipeline {
 					reuseNode true
 				}
 			}
+			environment {
+				XDG_CACHE_HOME = '/tmp/.cache'
+			}
 			steps {
 				dir('bugtracker-backend') {
 					sh 'go test -v ./...'
