@@ -2,20 +2,21 @@ pipeline {
 	agent any
 
 	stages {
-		stage('Unit Tests Backend') {
-			agent {
-				docker {
-					image 'snakee/golang-junit:1.21'
-					reuseNode true
+		stages('Execute Unit Tests') {
+			stage('Unit Tests Backend') {
+				agent {
+					docker {
+						image 'snakee/golang-junit:1.21'
+						reuseNode true
+					}
 				}
-			}
-			environment {
-				XDG_CACHE_HOME = '/tmp/.cache'
-				GOMODCACHE = '/tmp/go-mod-cache'
-			}
-			steps {
-				dir('bugtracker-backend') {
-					sh '''
+				environment {
+					XDG_CACHE_HOME = '/tmp/.cache'
+					GOMODCACHE = '/tmp/go-mod-cache'
+				}
+				steps {
+					dir('bugtracker-backend') {
+						sh '''
 					  go test -v ./... 2>&1 | go-junit-report > test-results.xml || true
 
 					  # Generate coverage report
@@ -25,47 +26,53 @@ pipeline {
 					  mkdir -p reports
 					  mv coverage.html reports/
 					'''
+					}
+				}
+				post {
+					always {
+						junit 'bugtracker-backend/test-results.xml'
+						publishHTML(target: [
+							reportDir: 'bugtracker-backend/reports',
+							reportFiles: 'coverage.html',
+							reportName: 'Backend Code Coverage Report'
+						])
+					}
 				}
 			}
-			post {
-				always {
-					junit 'bugtracker-backend/test-results.xml'
-					publishHTML(target: [
-						reportDir: 'bugtracker-backend/reports',
-						reportFiles: 'coverage.html',
-						reportName: 'Code Coverage Report'
-					])
-				}
-			}
-		}
 
-		stage('Unit Tests Frontend') {
-			agent {
-				docker {
-					image 'node:20-alpine'
-					reuseNode true
+			stage('Unit Tests Frontend') {
+				agent {
+					docker {
+						image 'node:20-alpine'
+						reuseNode true
+					}
 				}
-			}
-			steps {
-				dir('bugtracker-frontend') {
-					sh '''
+				steps {
+					dir('bugtracker-frontend') {
+						sh '''
 					npm ci
 					npm test
 					mkdir -p reports
 					mv coverage reports/
 				'''
+					}
+				}
+				post {
+					always {
+						junit 'bugtracker-frontend/test-results.xml'
+						publishHTML(target: [
+							reportDir: 'bugtracker-frontend/reports/coverage',
+							reportFiles: 'index.html',
+							reportName: 'Frontend Code Coverage Report'
+						])
+					}
 				}
 			}
-			post {
-				always {
-					junit 'bugtracker-frontend/test-results.xml'
-					publishHTML(target: [
-						reportDir: 'bugtracker-frontend/reports/coverage',
-						reportFiles: 'index.html',
-						reportName: 'Frontend Code Coverage Report'
-					])
-				}
-			}
+		}
+	}
+	post {
+		always {
+			cleanWs()
 		}
 	}
 }
