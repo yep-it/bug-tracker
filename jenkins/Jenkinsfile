@@ -18,15 +18,15 @@ pipeline {
 					steps {
 						dir('bugtracker-backend') {
 							sh '''
-					  go test -v ./... 2>&1 | go-junit-report > test-results.xml || true
+							  go test -v ./... 2>&1 | go-junit-report > test-results.xml || true
 
-					  # Generate coverage report
-					  go test -coverprofile=coverage.out -covermode=atomic ./...
-					  go tool cover -html=coverage.out -o coverage.html
+							  # Generate coverage report
+							  go test -coverprofile=coverage.out -covermode=atomic ./...
+							  go tool cover -html=coverage.out -o coverage.html
 
-					  mkdir -p reports
-					  mv coverage.html reports/
-					'''
+							  mkdir -p reports
+							  mv coverage.html reports/
+							'''
 						}
 					}
 					post {
@@ -41,7 +41,7 @@ pipeline {
 					}
 				}
 
-				stage('Unit Tests Frontend') {
+				stage('Unit Tests - Frontend') {
 					agent {
 						docker {
 							image 'node:20-alpine'
@@ -51,21 +51,24 @@ pipeline {
 					steps {
 						dir('bugtracker-frontend') {
 							sh '''
-						npm ci
-						npm test
-						mkdir -p reports
-						mv coverage reports/
-					'''
+								npm ci
+								npm test
+								mkdir -p reports
+								mv coverage reports/
+							'''
 						}
 					}
 					post {
 						always {
 							junit 'bugtracker-frontend/test-results.xml'
-							publishHTML(target: [
+                            publishHTML target: [
+                                allowMissing: true,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
 								reportDir: 'bugtracker-frontend/reports/coverage',
 								reportFiles: 'index.html',
-								reportName: 'Frontend Code Coverage Report'
-							])
+                                reportName: 'Frontend Coverage Report'
+                            ]
 						}
 					}
 				}
