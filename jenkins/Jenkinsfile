@@ -49,11 +49,12 @@ pipeline {
 			steps {
 				dir('bugtracker-frontend') {
 					sh '''
-					npm ci
-					npm test
-					mkdir -p reports
-					mv coverage reports/
-				'''
+						rm -rf coverage
+						npm ci
+						npm test
+						mkdir -p reports
+						mv coverage reports/
+					'''
 				}
 			}
 			post {
