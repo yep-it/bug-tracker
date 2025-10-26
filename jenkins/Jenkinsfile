@@ -4,7 +4,7 @@ pipeline {
 	stages {
 		stage('Execute Unit Tests') {
 			parallel {
-				stage('Unit Tests Backend') {
+				stage('Unit Tests - Backend') {
 					agent {
 						docker {
 							image 'snakee/golang-junit:1.21'
@@ -31,12 +31,15 @@ pipeline {
 					}
 					post {
 						always {
-							junit 'bugtracker-backend/test-results.xml'
-							publishHTML(target: [
+							junit 'bugtracker-backend/reports/report.xml'
+							publishHTML target: [
+								allowMissing: true,
+								alwaysLinkToLastBuild: true,
+								keepAll: true,
 								reportDir: 'bugtracker-backend/reports',
 								reportFiles: 'coverage.html',
-								reportName: 'Backend Code Coverage Report'
-							])
+								reportName: 'Backend Coverage Report'
+							]
 						}
 					}
 				}
@@ -62,42 +65,45 @@ pipeline {
 					post {
 						always {
 							junit 'bugtracker-frontend/test-results.xml'
-                            publishHTML target: [
-                                allowMissing: true,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
+							publishHTML target: [
+								allowMissing: true,
+								alwaysLinkToLastBuild: true,
+								keepAll: true,
 								reportDir: 'bugtracker-frontend/reports/coverage',
 								reportFiles: 'index.html',
-                                reportName: 'Frontend Coverage Report'
-                            ]
+								reportName: 'Frontend Coverage Report'
+							]
 						}
 					}
 				}
 			}
 		}
-		stage('Launch Application') {
+
+		stage('Launch application') {
 			agent {
 				docker {
 					image 'docker:27.5.1'
-					args '-v /var/run/docker.sock:/var/run/docker.sock -u 0'
 					reuseNode true
+					args '-v /var/run/docker.sock:/var/run/docker.sock -u 0'
 				}
 			}
 			steps {
-				sh 'docker-compose up -d --build'
+				sh 'docker compose up --build -d'
 			}
 		}
-		stage('API Tests') {
+
+		stage('API tests') {
 			agent {
 				docker {
-					image 'mcr.microsoft.com/playwright:v1.35.0-jammy'
-					args '-u 0 --network=host'
+					image 'mcr.microsoft.com/playwright:v1.50.0-jammy'
 					reuseNode true
+					args '-u 0 --network=host'  // Runs container as root, also local network
 				}
 			}
 			steps {
 				dir('tests-api') {
-					sh 'npx wait-port http://localhost:8000/api/health -t=30000 '
+					sh 'npx wait-port http://localhost:8080/api/health -t 30000'
+
 					sh 'npm ci'
 					sh 'npx playwright test'
 				}
@@ -106,9 +112,12 @@ pipeline {
 				always {
 					junit 'tests-api/test-results/results.xml'
 					publishHTML target: [
+						allowMissing: true,
+						alwaysLinkToLastBuild: true,
+						keepAll: true,
 						reportDir: 'tests-api/playwright-report',
 						reportFiles: 'index.html',
-						reportName: 'API Test HTML Report'
+						reportName: 'Playwright API Test Report'
 					]
 				}
 			}
@@ -116,14 +125,13 @@ pipeline {
 		stage('E2E Tests'){
 			agent {
 				docker {
-					image 'mcr.microsoft.com/playwright:v1.35.0-jammy'
-					args '-u 0 --network=host'
+					image 'mcr.microsoft.com/playwright:v1.50.0-jammy'
 					reuseNode true
+					args '--network=host -u 0'
 				}
 			}
 			steps {
 				dir('tests-e2e') {
-					sh 'npx wait-port http://localhost:3000 -t=30000 '
 					sh 'npm ci'
 					sh 'npx playwright test'
 				}
@@ -132,15 +140,18 @@ pipeline {
 				always {
 					junit 'tests-e2e/test-results/results.xml'
 					publishHTML target: [
+						allowMissing: true,
+						alwaysLinkToLastBuild: true,
+						keepAll: true,
 						reportDir: 'tests-e2e/playwright-report',
 						reportFiles: 'index.html',
-						reportName: 'E2E Test HTML Report'
+						reportName: 'Playwright Integration Test Report'
 					]
 				}
 			}
 		}
 
-		stage('Performance TEsts') {
+		stage('Performance Tests') {
 			agent {
 				docker {
 					image 'grafana/k6:latest'
@@ -156,9 +167,12 @@ pipeline {
 			post {
 				always {
 					publishHTML target: [
+						allowMissing: true,
+						alwaysLinkToLastBuild: true,
+						keepAll: true,
 						reportDir: 'tests-perf',
 						reportFiles: 'perf-results.html',
-						reportName: 'Performance Test Report'
+						reportName: 'K6 Performance Test Report'
 					]
 				}
 			}
