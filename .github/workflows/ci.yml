@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -81,19 +84,19 @@ jobs:
             path: bugtracker-frontend/test-results.xml
             reporter: jest-junit
 
-    create-coverage-comment:
-      if: github.event_name == 'pull_request'
-      needs: [unit-tests-backend]
-      runs-on: ubuntu-latest
-      permissions:
-        pull-requests: write
-      steps:
-        - name: Create Backend Coverage Comment
-          uses: peter-evans/create-or-update-comment@v4
-          with:
-            issue-number: ${{ github.event.pull_request.number }}
-            body: |
-              ## Backend Test Coverage Report
-              ```
-              ${{ needs.unit-tests-backend.outputs.coverage }}
-              ```
+  create-coverage-comment:
+    if: github.event_name == 'pull_request'
+    needs: [unit-tests-backend]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create Backend Coverage Comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Backend Test Coverage Report
+            ```
+            ${{ needs.unit-tests-backend.outputs.coverage }}
+            ```
