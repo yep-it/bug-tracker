@@ -67,7 +67,7 @@ jobs:
             cache: 'npm'
             cache-dependency-path: bugtracker-frontend/package-lock.json
 
-        - name: Execute Frontend Unit Tests
+        - name: Test frontend
           id: test-frontend
           working-directory: ./bugtracker-frontend
           run: |
@@ -149,32 +149,32 @@ jobs:
       - name: Setup K6
         uses: grafana/setup-k6-action@v1
 
-      - name: Shut Down Application
-        run: docker compose down
-
-      - name: Run Performance Test
+      - name: Run K6 Performance Test
         uses: grafana/run-k6-action@v1
         with:
           path: tests-perf/script.js
           flags: --out json=summary.json
 
-      - name: Publish API Test Results
+      - name: Shut Down Application
+        run: docker compose down
+
+      - name: Upload API Test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-tests-results
-          path: tests-api/test-results/
+          name: api-test-results
+          path: ./tests-api/test-results/
           retention-days: 30
 
-      - name: Publish API Test Playwright Report
+      - name: Upload API Test Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-tests-playwright-report
-          path: tests-api/playwright-report/
+          name: api-test-playwright-report
+          path: ./tests-api/playwright-report/
           retention-days: 30
 
-      - name: Upload E2E Tests Results
+      - name: Upload E2E test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -182,31 +182,31 @@ jobs:
           path: ./tests-e2e/test-results/
           retention-days: 30
 
-      - name: Upload Performance Raw Results
+      - name: Upload E2E Test Playwright Report
         if: always()
         uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-playwright-report
+          path: ./tests-e2e/playwright-report/
+          retention-days: 30
+
+      - name: Upload Performance Raw Results
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: performance-raw-results
           path: summary.json
           retention-days: 30
 
-      - name: Upload Performance HTML Report
-        if: always()
+      - name: Upload Performance HTML report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: performance-report
           path: perf-results.html
           retention-days: 30
 
-      - name: Upload E2E Test Playwright Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-tests-playwright-report
-          path: ./tests-e2e/playwright-report/
-          retention-days: 30
-
-      - name: Publish Api Test Results
+      - name: Publish API Test Results
         uses: dorny/test-reporter@v1
         if: always()
         with:
@@ -219,7 +219,7 @@ jobs:
         if: always()
         with:
           name: E2E Tests Report
-          path: ./tests-e2e/test-results/results.xml
+          path: ./tests-e2e/test-results/*.xml
           reporter: jest-junit
 
 
